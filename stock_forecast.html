@@ -1,1 +1,130 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>เครื่องมือคาดคะเนราคาหุ้น — Forecast Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0E1327;
+    --panel:#161E3D;
+    --panel-2:#1D2750;
+    --line:#2A3563;
+    --ink:#E9EDFA;
+    --muted:#8D98C2;
+    --actual:#F2B441;      /* ราคาจริง */
+    --model:#3ED598;       /* เส้นแนวโน้ม */
+    --band:#7C6CF0;        /* ช่วงความน่าจะเป็น */
+    --down:#FF6B7A;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(900px 500px at 15% -10%, #1B2450 0%, transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Sans Thai','Noto Sans Thai','Leelawadee UI',system-ui,sans-serif;
+    font-size:15px;
+    line-height:1.6;
+    min-height:100vh;
+  }
+  .num{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
 
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 60px}
+
+  header.top{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between;margin-bottom:22px}
+  .brand h1{margin:0;font-size:26px;font-weight:700;letter-spacing:-.3px}
+  .brand p{margin:4px 0 0;color:var(--muted);font-size:14px;max-width:56ch}
+  .badge{
+    display:inline-flex;align-items:center;gap:8px;
+    border:1px solid var(--line);background:var(--panel);
+    padding:8px 14px;border-radius:999px;font-size:13px;color:var(--muted);
+  }
+  .badge b{color:var(--actual);font-weight:600}
+
+  .grid{display:grid;grid-template-columns:340px 1fr;gap:18px;align-items:start}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+  .card h2{margin:0 0 14px;font-size:15px;font-weight:600;letter-spacing:.02em}
+  .card h2 .step{color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:12px;margin-right:8px}
+
+  label{display:block;font-size:13px;color:var(--muted);margin:12px 0 6px}
+  input[type=text],input[type=number],textarea,select{
+    width:100%;background:var(--bg);border:1px solid var(--line);color:var(--ink);
+    border-radius:10px;padding:10px 12px;font-size:14px;font-family:inherit;
+  }
+  textarea{min-height:150px;resize:vertical;font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:1.5}
+  input:focus,textarea:focus,select:focus,button:focus-visible{outline:2px solid var(--band);outline-offset:2px}
+
+  .row{display:flex;gap:10px}
+  .row>*{flex:1;min-width:0}
+
+  button{
+    font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;
+    background:var(--panel-2);color:var(--ink);border:1px solid var(--line);
+    border-radius:10px;padding:9px 12px;transition:background .15s,border-color .15s;
+  }
+  button:hover{background:#26326a;border-color:#3d4b8f}
+  button.primary{background:var(--actual);color:#231703;border-color:transparent;font-weight:600;width:100%;padding:12px;font-size:15px;margin-top:16px}
+  button.primary:hover{background:#ffca5c}
+  .btn-row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .btn-row button{flex:1}
+
+  .file-drop{
+    margin-top:8px;border:1px dashed var(--line);border-radius:10px;padding:10px;
+    text-align:center;color:var(--muted);font-size:12.5px;cursor:pointer
+  }
+  .file-drop:hover{border-color:var(--band);color:var(--ink)}
+  .file-drop input{display:none}
+
+  /* ---- สถิติ ---- */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .stat .k{font-size:12px;color:var(--muted)}
+  .stat .v{font-size:20px;font-weight:600;margin-top:2px}
+  .stat .v.up{color:var(--model)}
+  .stat .v.dn{color:var(--down)}
+
+  /* ---- กราฟ ---- */
+  .chart-card{padding:14px 14px 10px}
+  .chart-head{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--muted)}
+  .legend i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+  .readout{font-size:12.5px;color:var(--muted);min-height:20px}
+  .readout b{color:var(--ink);font-weight:600}
+  #chartBox{position:relative;width:100%;height:380px}
+  canvas{width:100%;height:100%;display:block;touch-action:none}
+
+  /* ---- ตาราง ---- */
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:500;font-size:12.5px;text-align:right;position:sticky;top:0;background:var(--panel)}
+  th:first-child,td:first-child{text-align:left}
+  tbody tr:hover{background:var(--panel-2)}
+  .scroll{max-height:300px;overflow:auto;border-radius:10px}
+
+  .note{color:var(--muted);font-size:12.5px;margin-top:10px}
+  .warn{background:#2a1c22;border:1px solid #58303c;color:#ffb3bd;border-radius:10px;padding:10px 12px;font-size:13px;margin-top:12px}
+  .hidden{display:none}
+
+  footer{margin-top:26px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12.5px;line-height:1.7}
+  footer b{color:var(--ink)}
+
+  @media (max-width:900px){
+    .grid{grid-template-columns:1fr}
+    #chartBox{height:300px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <h1>เครื่องมือคาดคะเนราคาหุ้น</h1>
+      <p>ใส่ราคาย้อนหลัง แล้วดูว่าโมเดลทางสถิติ 3 แบบ
